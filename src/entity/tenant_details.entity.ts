@@ -4,7 +4,7 @@ export type TenantStatus = 'active' | 'inactive' | 'suspended' | 'archived';
 
 export type TenantTier = 'free' | 'basic' | 'pro' | 'enterprise';
 
-export interface ITenantDetails extends Document {
+export interface ITenantDetails  {
   status: TenantStatus;
   name: string;
   tenant_id: string;

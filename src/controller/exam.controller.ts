@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import logger from '../utils/logger.utils';
-import ExamPapersService from '../service/cbse/exampapers.cbse.service';
 import { authMiddleware } from '../middleware/auth.middleware';
 import multer from 'multer';
+import { tenantMiddleware } from '../middleware/tenant.middleware';
 
 // Setup multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
@@ -16,8 +16,6 @@ const uploadFields = [
 
 class ExamController {
   public router: Router;
-  public examPapersService = ExamPapersService;
-
 
   constructor() {
     this.router = Router();
@@ -28,31 +26,36 @@ class ExamController {
     this.router.post(
       '/cbse-exam-papers/upload',
       authMiddleware,
+      tenantMiddleware,
       upload.fields(uploadFields),
-      this.uploadExamPapers
+      this.uploadExamPapers.bind(this)
     );
 
     this.router.put(
       '/cbse-exam-papers/:examPaperId/evaluation',
       authMiddleware,
-      this.evaluateExamPaper
+      tenantMiddleware,
+      this.evaluateExamPaper.bind(this)
     );
 
     this.router.get(
       '/cbse-exam-papers/model-evaluated',
       authMiddleware,
+      tenantMiddleware,
       this.getModelEvaluatedPapers.bind(this)
     );
 
     this.router.get(
       '/cbse-exam-papers/verified',
       authMiddleware,
+      tenantMiddleware,
       this.getVerifiedPapers.bind(this)
     );
 
     this.router.put(
       '/cbse-exam-papers/verified/:paperId',
       authMiddleware,
+      tenantMiddleware,
       this.updateVerifiedExamPaper.bind(this)
     );
   }
@@ -66,18 +69,17 @@ class ExamController {
       return;
     }
 
-    logger.info(`Received exam paper upload for year: ${year}`);
+    logger.info(`Received exam paper upload for year: ${year} for tenant`);
 
     try {
       // The service will handle the logic for each uploaded file
-      const result = await this.examPapersService.processUpload(year, files, req.user!);
+      const result = await req.service.processUpload(year, files, req.user!);
       res.status(201).json(result);
     } catch (error: any) {
       logger.error(`Error processing exam paper upload for year: ${year}`, { error });
       res.status(500).json({ message: 'Error processing upload', error: error.message });
     }
   }
-
   private async evaluateExamPaper(req: Request, res: Response): Promise<void> {
     const { examPaperId } = req.params;
     const evaluationData = req.body;
@@ -85,7 +87,7 @@ class ExamController {
     logger.info(`Received evaluation for exam paper ID: ${examPaperId}`);
 
     try {
-      const result = await ExamPapersService.processEvaluation(examPaperId, evaluationData);
+      const result = await req.service.processEvaluation(examPaperId, evaluationData);
       res.status(200).json(result);
     } catch (error: any) {
       logger.error(`Error processing evaluation for exam paper ID: ${examPaperId}`, { error });
@@ -94,12 +96,11 @@ class ExamController {
   }
 
   private async getModelEvaluatedPapers(req: Request, res: Response): Promise<void> {
-    // TODO CHANGE THIS
     const ownerId = req.user!.id;
     logger.info(`Fetching model-evaluated papers for owner ID: ${ownerId}`);
 
     try {
-      const result = await this.examPapersService.getModelEvaluatedPapersByOwner(ownerId);
+      const result = await req.service.getModelEvaluatedPapersByOwner(ownerId);
       res.status(200).json(result);
     } catch (error: any) {
       logger.error(`Error fetching model-evaluated papers for owner ID: ${ownerId}`, { error });
@@ -108,12 +109,11 @@ class ExamController {
   }
 
   private async getVerifiedPapers(req: Request, res: Response): Promise<void> {
-    //TODO Change this
     const ownerId = req.user!.id;
     logger.info(`Fetching verified papers for owner ID: ${ownerId}`);
 
     try {
-      const result = await this.examPapersService.getVerifiedPapersByOwner(ownerId);
+      const result = await req.service.getVerifiedPapersByOwner(ownerId);
       res.status(200).json(result);
     } catch (error: any) {
       logger.error(`Error fetching verified papers for owner ID: ${ownerId}`, { error });
@@ -128,7 +128,7 @@ class ExamController {
     logger.info(`Updating verified exam paper ID: ${paperId}`);
 
     try {
-      const result = await this.examPapersService.updateVerifiedExamPaper(paperId, evaluationData);
+      const result = await req.service.updateVerifiedExamPaper(paperId, evaluationData);
       res.status(200).json(result);
     } catch (error: any) {
       logger.error(`Error updating verified exam paper ID: ${paperId}`, { error });
