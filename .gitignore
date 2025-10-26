@@ -19,3 +19,6 @@ yarn-debug.log*
 # IDE config
 .idea/
 .vscode/
+
+# AWS User access
+SQS-USER_accessKeys.csv
